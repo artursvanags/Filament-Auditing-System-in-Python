@@ -1,0 +1,9 @@
+qr/desktop.ini
+lib/desktop.ini
+desktop.ini
+.vscode/settings.json
+lib/database.py
+lib/filaments.py
+lib/printers.py
+qr/339839.png
+database.db
