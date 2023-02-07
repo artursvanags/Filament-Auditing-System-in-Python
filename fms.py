@@ -1,82 +1,47 @@
 import random
-import sqlite3
 import hashlib
+
+from lib.qr import generate_qr_label
+from lib.printers import add_printer
+from lib.database import init_database
+from lib.database import init_database_connection
 
 database_name = "database"
 
-
-def init_database():
-    global database_name
-    conn = sqlite3.connect(database_name + ".db")
-    c = conn.cursor()
-
-    c.execute("""CREATE TABLE IF NOT EXISTS filament (
-                token text PRIMARY KEY,
-                manufacturer text,
-                material text,
-                stock_weight real,
-                leftover_weight real,
-                color text,
-                state text,
-                date_added datetime DEFAULT (datetime('now', 'localtime')),
-                date_last_used datetime
-                )""")
-    
-
-    c.execute("""CREATE TABLE IF NOT EXISTS printers (
-                id integer PRIMARY KEY,
-                name text,
-                last_used_filament text,
-                date_added datetime DEFAULT (datetime('now', 'localtime'))
-                )""")
-
-    conn.commit()
-    conn.close()
-
-def add_printer():
-    global database_name
-    conn = sqlite3.connect(database_name + ".db")
-    c = conn.cursor()
-
-    name = input("Enter printer name: ")
-
-    # Check if printer already exists
-    c.execute("SELECT * FROM printers WHERE name=?", (name,))
-    existing_printer = c.fetchone()
-
-    # If printer exists, inform the user
-    if existing_printer:
-        print(f"Printer '{name}' already exists.")
-    # If printer does not exist, insert a new printer
-    else:
-        c.execute(
-            "INSERT INTO printers (name, date_added) VALUES (?, datetime('now', 'localtime'))", (name,))
-        print(f"Printer '{name}' added.")
-
-    conn.commit()
-    conn.close()
-
 def add_filament():
-    global database_name
-    conn = sqlite3.connect(database_name + ".db")
-    c = conn.cursor()
+    c, conn = init_database_connection(database_name)
 
+    # Ask user for filament details
     manufacturer = input("Enter filament manufacturer: ")
     material = input("Enter filament material: ")
-    weight = float(input("Enter filament weight: "))
+    while True:
+        try:
+            weight = float(input("Enter filament weight in grams ( max. 2500 ): "))
+            if weight > 2500:
+                print("Maximum weight is 2500 grams.")
+            else:
+                break
+        except ValueError:
+            print("Please enter a number.")
     color = input("Enter filament color: ")
-    token = hashlib.sha224(
-        str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
+    token = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
 
+    # Insert filament details into database
     c.execute("INSERT INTO filament (token, manufacturer, material, stock_weight, leftover_weight, color, state, date_added, date_last_used) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
               (token, manufacturer, material, weight, weight, color, "new"))
     conn.commit()
+
+    # Print filament token
     print(f"Filament added with token: {token}")
 
+    # Generate QR label
+    text = f"Manufacturer: {manufacturer}\nMaterial: {material}\nWeight: {weight} g\nColor: {color}"
+    generate_qr_label(token, text)
+
+    print(f"QR Label code generated in folder.")
+
 def use_filament():
-    global database_name
-    conn = sqlite3.connect(database_name + ".db")
-    c = conn.cursor()
+    c, conn = init_database_connection(database_name)
 
     c.execute("SELECT * FROM filament WHERE state != 'archived'")
     filaments = c.fetchall()
@@ -156,7 +121,7 @@ def menu():
         else:
             print("Invalid choice.")
 
-init_database()
+init_database(database_name)
 if init_database:
     menu()
 else:
