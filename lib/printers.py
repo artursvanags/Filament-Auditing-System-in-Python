@@ -1,9 +1,7 @@
-import sqlite3
+from lib.database import init_database_connection
 
-def add_printer():
-    global database_name
-    conn = sqlite3.connect(database_name + ".db")
-    c = conn.cursor()
+def add_printer(database):
+    c, conn = init_database_connection(database)
 
     name = input("Enter printer name: ")
 

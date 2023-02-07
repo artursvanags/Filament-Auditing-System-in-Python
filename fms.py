@@ -35,7 +35,7 @@ def add_filament():
     print(f"Filament added with token: {token}")
 
     # Generate QR label
-    text = f"Manufacturer: {manufacturer}\nMaterial: {material}\nWeight: {weight} g\nColor: {color}"
+    text = f"{manufacturer} {material}\n{weight} g\nColor: {color}"
     generate_qr_label(token, text)
 
     print(f"QR Label code generated in folder.")
@@ -83,7 +83,7 @@ def use_filament():
     printers = c.fetchall()
     if not printers:
         print("There are no available printers.")
-        add_printer()
+        add_printer(database_name)
         c.execute("SELECT * FROM printers")
         printers = c.fetchall()
 
@@ -98,9 +98,11 @@ def use_filament():
     if weight > selected_filament[4]:
         c.execute("UPDATE filament SET leftover_weight=0, state='archived' WHERE token=?", (selected_filament[0],))
     else:
-        c.execute("UPDATE filament SET leftover_weight=leftover_weight-?, date_last_used=datetime('now'), state='used' WHERE token=?", (weight, filament[0]))
+        c.execute("UPDATE filament SET leftover_weight=leftover_weight-?, date_last_used=datetime('now'), state='used' WHERE token=?", (weight, selected_filament[0]))
     c.execute("UPDATE printers SET last_used_filament=? WHERE id=?", (selected_filament[0], selected_printer[0]))
-    
+    # print out calculated weight and leftover weight.
+    print(f"Filament use registered.\nFilament weight used: {weight} g.\nLeftover weight: {selected_filament[4] - weight} g")
+
     conn.commit()
     conn.close()
 
