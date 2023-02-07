@@ -1,6 +1,6 @@
 *.png
 qr/
 *.db
-**/desktop.ini
+*desktop.ini
 __pycache__/
 *.pyc
