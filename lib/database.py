@@ -1,12 +1,12 @@
 import sqlite3
 name = "database"
-def init_database_connection():
-    conn = sqlite3.connect(name + ".db")
-    c = conn.cursor()
-    return c, conn
+
+def get_database_connection():
+    return sqlite3.connect(name + ".db")
 
 def init_database():
-    c, conn = init_database_connection()
+    conn = get_database_connection()
+    c = conn.cursor()
 
     c.execute("""CREATE TABLE IF NOT EXISTS filament (
                 token text PRIMARY KEY,

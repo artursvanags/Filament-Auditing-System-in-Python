@@ -1,8 +1,8 @@
 import threading
 
-from lib.database import init_database, init_database_connection
-from lib.scanner import scan_qr_code
-from lib.filament import add_filament, use_filament
+from lib.database   import init_database, get_database_connection
+from lib.scanner    import scan_qr_code
+from lib.modules   import add_filament, use_filament
 
 def menu():
 
@@ -11,7 +11,7 @@ def menu():
         print("1. Add filament roll")
         print("2. Use filament roll")
         print("3. Exit")
-        choice = int(input("Scan QR code or Enter your choice (1-3): "))
+        choice = int(input("Scan the QR code or Enter your choice (1-3): "))
         if choice == 1:
             add_filament()
         elif choice == 2:
@@ -22,8 +22,8 @@ def menu():
             print("Invalid choice.")
 
 def filament_data(token):
-    c, conn = init_database_connection()
-
+    conn = get_database_connection()
+    c = conn.cursor()
     # Fetch data for the given token
     c.execute("SELECT * FROM filament WHERE token=?", (token,))
     filament_data = c.fetchone()
@@ -43,10 +43,10 @@ def filament_data(token):
 if __name__ == '__main__':
     # Create the database
     init_database()
-    
+
     # Start the scanner in a separate thread
-    scanner_thread = threading.Thread(target=scan_qr_code, args=(filament_data,))
-    scanner_thread.start()
+    # scanner_thread = threading.Thread(target=scan_qr_code, args=(filament_data,))
+    # scanner_thread.start()
 
     # Run the menu
     menu()

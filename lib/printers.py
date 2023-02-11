@@ -1,7 +1,7 @@
-from lib.database import init_database_connection
-
+from lib.database import get_database_connection
 def add_printer():
-    c, conn = init_database_connection()
+    conn = get_database_connection()
+    c = conn.cursor()
 
     name = input("Enter printer name: ")
 
