@@ -31,7 +31,7 @@ def filament_data(token):
     # Print information about the filament
     if token in filament_data:
         print(f"State: {filament_data[6]}")
-        print(f"Data Added: {filament_data[7]} | Last Used: {filament_data[8]}")
+        print(f"Data Added: {filament_data[8]} | Last Used: {filament_data[9]}")
         print(f"Token: {filament_data[0]} | Manufacturer: {filament_data[1]} | Material: {filament_data[2]} | Stock Weight: {filament_data[3]}g | Leftover Weight: {filament_data[4]}g | Color: {filament_data[5]}")
     else:
         print("Invalid QR code token")
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # Create the database
     init_database()
 
-    # Start the scanner in a separate thread
+    #Start the scanner in a separate thread
     # scanner_thread = threading.Thread(target=scan_qr_code, args=(filament_data,))
     # scanner_thread.start()
 
