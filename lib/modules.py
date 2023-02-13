@@ -118,27 +118,29 @@ def add_filament():
     # Get the last added filament from the database if it exists
     cursor.execute("SELECT * FROM filament ORDER BY date_added DESC LIMIT 1")
     filament_data = cursor.fetchone()
-    filament_data = {
-            "token": filament_data[0],
-            "manufacturer": filament_data[1],
-            "material": filament_data[2],
-            "weight": filament_data[3],
-            "color": filament_data[5]
-        }
 
     # Ask user for filament details, use last added filament as default if it exists
     token = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
-
+    max_weight = 2500
     if filament_data:
+        
+        filament_data = {
+        "token": filament_data[0],
+        "manufacturer": filament_data[1],
+        "material": filament_data[2],
+        "weight": filament_data[3],
+        "color": filament_data[5]
+        }
+        
         manufacturer = input("Enter filament manufacturer [{}]: ".format(filament_data['manufacturer'])) or filament_data['manufacturer']
         material = input("Enter filament material [{}]: ".format(filament_data['material'])) or filament_data['material']
         while True:
-            weight_input = input("Enter filament weight in grams ( max. 2500 ) [{}]: ".format(filament_data['weight']))
+            weight_input = input(f"Enter filament weight in grams ( max. {max_weight} ) [{filament_data['weight']}]: ")
             if weight_input:
                 try:
-                    weight = float(weight_input)
-                    if weight > 2500:
-                        print("Maximum weight is 2500 grams. Please type the weight again!")
+                    weight = weight_input
+                    if weight >= max_weight:
+                        print(f"Maximum weight is {max_weight} grams. Please type the weight again!")
                     else:
                         break
                 except ValueError:
@@ -152,8 +154,8 @@ def add_filament():
         material = input("Enter filament material: ")
         while True:
             try:
-                weight = float(input("Enter filament weight in grams ( max. 2500 ): "))
-                if weight > 2500:
+                weight = abs(float(input("Enter filament weight in grams ( max. 2500 ): ")))
+                if weight >= 2500:
                     print("Maximum weight is 2500 grams. Please type the weight again!")
                 else:
                     break
