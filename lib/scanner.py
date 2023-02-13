@@ -39,7 +39,7 @@ def scan_qr_code(token):
                     data = obj.data.decode("utf-8")
                     if data != prev_data:
                         prev_data = data
-                        data = token(data)
+                        #data = token(data)
                         beep(1,140,0)
 
             
