@@ -1,4 +1,4 @@
-1.0.0 2019-01-01
+
 # Filament Management System
 ## Concept
 The concept of the filament management system is to organize existing and new filament rolls by registering them in the system with metadata. The metadata would consist of manufacturer name, material type, stock weight, leftover weight and color. The metadata would also be used with logging registry that shows the current filament usage, such as date, last printer used, last file name used for printing and weight used.
@@ -8,6 +8,12 @@ The filament management system would allow users to add a new filament roll and 
 Each filament roll that is added to the system will have a generated unique token, that can be used to track and log the filament roll. Each token will have the ability to be printed out in QR code label format, so that it can be sticked to the actual filament roll. 
 
 The QR code would allow for the user to accurately track the filament in the fulfillment process by scanning or manually inputting in the system whenever the filament roll is about to get used for printing. 
+
+
+# Current features
+* QR code generation, scanning with default webcam
+* Filament roll registration
+
 ## Process description
 ### Adding a new filament roll
 When a new filament roll is added to the system:
