@@ -51,7 +51,5 @@ def init_database():
                 date_last_used datetime
                 )""")
 
-    print ("Database initialized.")
-
     conn.commit()
     conn.close()
