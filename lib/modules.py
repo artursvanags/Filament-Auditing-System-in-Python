@@ -124,8 +124,6 @@ def get_files(cursor):
 def add_filament():
     conn = get_database_connection()
     cursor = conn.cursor()
-    # Get all storage locations from the database     
-    storage_locations = get_storage_locations(cursor)
 
     token = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
     max_weight = 1000
@@ -243,7 +241,7 @@ def add_filament():
     print(f"QR Label code generated in folder.")
     
     # Write to log
-    log_changes("INFO", "add_filament", "Filament added", {"manufacturer": manufacturer, "material": material, "weight": weight, "color": color})
+    log_changes("INFO", "add_filament", "Filament added", {"manufacturer": manufacturer, "material": material, "weight": f"{weight}", "color": color})
 
     conn.commit()
     conn.close()
@@ -347,25 +345,21 @@ def use_filament():
     weight = float(input("Enter filament weight used: "))
     
     # 7. Update the selected filament row in the database with the new leftover weight
-    if weight >= selected_filament[4]:
+
+    if weight > selected_filament[4]:
+        
         # If the weight used is greater than the leftover weight, set leftover weight to 0 and archive the filament
         cursor.execute("UPDATE filament SET leftover_weight=0, date_last_used=datetime('now'), state='archived' WHERE token=?", (selected_filament[0],))    
         cursor.execute("SELECT all_filaments FROM storage_locations")
+        # Locate the filament token from all_filaments column in storage_locations table, remove it from the list but retain the rest of the filaments that are separated by commas
+        cursor.execute("SELECT all_filaments FROM storage_locations WHERE id=?", (selected_filament[6],))
         all_filaments = cursor.fetchone()[0]
         all_filaments.remove(selected_filament[0])
-        cursor.execute("UPDATE storage_locations SET all_filaments=?", (all_filaments,))
-    
+        cursor.execute("UPDATE storage_locations SET all_filaments=? WHERE id=?", (all_filaments, selected_filament[6]))
+
     else:
         cursor.execute("UPDATE filament SET leftover_weight=leftover_weight-?, date_last_used=datetime('now'), state='used' WHERE token=?", (weight, selected_filament[0]))
-    # Locate the filament token from all_filaments column in storage_locations table, remove it from the list but retain the rest of the filaments that are separated by commas
-    cursor.execute("SELECT all_filaments FROM storage_locations WHERE id=?", (selected_filament[6],))
-    all_filaments = cursor.fetchone()[0]
-    all_filaments.remove(selected_filament[0])
-    cursor.execute("UPDATE storage_locations SET all_filaments=? WHERE id=?", (all_filaments, selected_filament[6]))
 
-    #cursor.execute("UPDATE printers SET last_used_filament=?, date_last_used=datetime('now') WHERE id=?", (selected_filament[0], selected_printer[0]))
-    #cursor.execute("INSERT INTO files (name, printer, filament, weight) VALUES (?, ?, ?, ?)", (filename, selected_printer[1], selected_filament[0], weight))
-    
     #Print out the weight used & filament leftover weight
     print(f"Filament use registered.\nFilament weight used: {weight} g.\nLeftover weight: {selected_filament[4] - weight} g")
 
