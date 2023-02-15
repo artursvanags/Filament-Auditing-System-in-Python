@@ -6,3 +6,4 @@ qr/
 __pycache__/
 *.pyc
 log.json
+qrtest.py
