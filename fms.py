@@ -1,11 +1,13 @@
 import threading
+import os
 
 from lib.database   import init_database, get_database_connection
 from lib.scanner    import scan_qr_code
-from lib.modules   import add_filament, use_filament
+from lib.modules    import add_filament, use_filament
+from lib.log        import log_changes
+from config         import database_name
 
 def menu():
-
     while True:
         print("Filament Management System")
         print("1. Add filament roll")
@@ -20,6 +22,7 @@ def menu():
             break
         else:
             print("Invalid choice.")
+
 
 def filament_data(token):
     conn = get_database_connection()
@@ -41,9 +44,29 @@ def filament_data(token):
 
 
 if __name__ == '__main__':
-    # Create the database
-    init_database()
+    # If log file doesn't exist, create it and log the creation
+    if not os.path.exists("log.json"):
+        with open("log.json", "w") as log_file:
+            log_file.write("")
+        log_changes("INFO", "log", "Log file created", "Initial")
 
+
+    # If the database file doesn't exist, create it and log the creation
+    if not os.path.exists(database_name + ".db"):
+        init_database()
+        print("Database file has been created with the following tables")
+        # print the tables it created
+        conn = get_database_connection()
+        c = conn.cursor()
+
+        c.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        print(c.fetchall())
+
+        conn.close()
+
+        log_changes("INFO", "database", "Database file created", "Initial")
+    else:
+        print("Database Initialized!")
     #Start the scanner in a separate thread
     # scanner_thread = threading.Thread(target=scan_qr_code, args=(filament_data,))
     # scanner_thread.start()

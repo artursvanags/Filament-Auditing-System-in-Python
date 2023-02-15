@@ -1,8 +1,8 @@
 import sqlite3
-name = "database"
+from config import database_name
 
 def get_database_connection():
-    return sqlite3.connect(name + ".db")
+    return sqlite3.connect(database_name + ".db")
 
 def init_database():
     conn = get_database_connection()
@@ -24,7 +24,7 @@ def init_database():
 
     # Add a table for printers 
     c.execute("""CREATE TABLE IF NOT EXISTS printers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                serial_number PRIMARY KEY,
                 name text,
                 last_used_filament text,
                 date_added datetime DEFAULT (datetime('now', 'localtime')),
@@ -43,7 +43,7 @@ def init_database():
     # Add a table for files
     c.execute("""CREATE TABLE IF NOT EXISTS files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name text,
+                filename text,
                 weight real,
                 last_used_filament text,
                 last_used_printer text,
@@ -51,5 +51,15 @@ def init_database():
                 date_last_used datetime
                 )""")
 
+    # Add a table for print history
+    c.execute("""CREATE TABLE IF NOT EXISTS print_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file text,
+                printer text,
+                filament text,
+                weight real,
+                date_added datetime DEFAULT (datetime('now', 'localtime'))
+                )""")
+    
     conn.commit()
     conn.close()
