@@ -3,6 +3,7 @@ import hashlib
 
 from lib.database   import get_database_connection
 from lib.qr         import generate_qr_label
+from lib.log        import log_changes
 
 def add_storage_location():
     conn = get_database_connection()
@@ -23,6 +24,9 @@ def add_storage_location():
     else:
         c.execute("INSERT INTO storage_locations (id, name, date_added) VALUES (?, ?, datetime('now', 'localtime'))", (id, name,))
         print(f"Storage location '{name}' added.")
+    
+    # Write to log
+    log_changes("INFO", "add_storage_location", "Storage location added", f"Added storage location '{name}'.")
 
     conn.commit()
     conn.close()
@@ -55,6 +59,9 @@ def add_printer():
         c.execute(
             "INSERT INTO printers (name, date_added) VALUES (?, datetime('now', 'localtime'))", (name,))
         print(f"Printer '{name}' added.")
+    
+    # Write to log
+    log_changes("INFO", "add_printer", "Printer added", f"Added printer '{name}'.")
 
     conn.commit()
     conn.close()
@@ -98,6 +105,9 @@ def add_file():
             "INSERT INTO files (name, weight, date_added) VALUES (?, ?, datetime('now', 'localtime'))", (name, weight))
         print(f"File '{name}' added.")
 
+    # Write to log
+    log_changes("INFO", "add_file", "File added", f"Added file '{name}'.")
+
     conn.commit()
     conn.close()
 
@@ -114,16 +124,18 @@ def get_files(cursor):
 def add_filament():
     conn = get_database_connection()
     cursor = conn.cursor()
+    # Get all storage locations from the database     
+    storage_locations = get_storage_locations(cursor)
 
+    token = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
+    max_weight = 1000
+    
     # Get the last added filament from the database if it exists
     cursor.execute("SELECT * FROM filament ORDER BY date_added DESC LIMIT 1")
     filament_data = cursor.fetchone()
 
-    # Ask user for filament details, use last added filament as default if it exists
-    token = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
-    max_weight = 2500
     if filament_data:
-        
+
         filament_data = {
         "token": filament_data[0],
         "manufacturer": filament_data[1],
@@ -134,35 +146,58 @@ def add_filament():
         
         manufacturer = input("Enter filament manufacturer [{}]: ".format(filament_data['manufacturer'])) or filament_data['manufacturer']
         material = input("Enter filament material [{}]: ".format(filament_data['material'])) or filament_data['material']
+        
         while True:
             weight_input = input(f"Enter filament weight in grams ( max. {max_weight} ) [{filament_data['weight']}]: ")
             if weight_input:
                 try:
-                    weight = weight_input
-                    if weight >= max_weight:
+                    weight = float(weight_input)
+                    if weight > max_weight:
                         print(f"Maximum weight is {max_weight} grams. Please type the weight again!")
                     else:
                         break
                 except ValueError:
                     print("Please enter a number only.")
             else:
-                weight = filament_data['weight']
+                weight = abs(filament_data['weight'])
                 break
         color = input("Enter filament color [{}]: ".format(filament_data['color'])) or filament_data['color']
     else:
-        manufacturer = input("Enter filament manufacturer: ")
-        material = input("Enter filament material: ")
+        # ask user for manufacturer & material details, but if they are empty, print an error message and ask again
         while True:
             try:
-                weight = abs(float(input("Enter filament weight in grams ( max. 2500 ): ")))
-                if weight >= 2500:
-                    print("Maximum weight is 2500 grams. Please type the weight again!")
+                manufacturer = input("Enter filament manufacturer: ")
+                if not manufacturer:
+                    raise ValueError
+                break
+            except ValueError:
+                print("Please enter a manufacturer name.")
+        while True:
+            try:
+                material = input("Enter filament material: ")
+                if not material:
+                    raise ValueError
+                break
+            except ValueError:
+                print("Please enter a material name.")
+        while True:
+            try:
+                weight = abs(float(input(f"Enter filament weight in grams ( max. {max_weight} ): ")))
+                if weight > max_weight:
+                    print(f"Maximum weight is {max_weight} grams. Please type the weight again!")
                 else:
                     break
             except ValueError:
                 print("Please enter a number only.")
-        color = input("Enter filament color: ")
-    
+        while True:
+            try:
+                color = input("Enter filament color: ")
+                if not color:
+                    raise ValueError
+                break
+            except ValueError:
+                print("Please enter a color name.")
+
     # Get all storage locations from the database     
     storage_locations = get_storage_locations(cursor)
     
@@ -207,6 +242,9 @@ def add_filament():
     generate_qr_label(token, text)
     print(f"QR Label code generated in folder.")
     
+    # Write to log
+    log_changes("INFO", "add_filament", "Filament added", {"manufacturer": manufacturer, "material": material, "weight": weight, "color": color})
+
     conn.commit()
     conn.close()
 
@@ -330,6 +368,9 @@ def use_filament():
     
     #Print out the weight used & filament leftover weight
     print(f"Filament use registered.\nFilament weight used: {weight} g.\nLeftover weight: {selected_filament[4] - weight} g")
+
+    # Write all changes to the log
+    log_changes("INFO", "use_filament","Filament has been used",{"Filament Token": selected_filament[0] , "Leftover weight:": f"{selected_filament[4] - weight} g"})
 
     conn.commit()
     conn.close()
