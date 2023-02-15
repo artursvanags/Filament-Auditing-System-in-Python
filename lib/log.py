@@ -12,9 +12,3 @@ def log_changes(log_level, func_name, event, details):
     }
     with open("log.json", "a") as log_file:
         log_file.write(json.dumps(log_entry) + "\n")
-
-# If log file doesn't exist, create it and log the creation
-if not os.path.exists("log.json"):
-    with open("log.json", "w") as log_file:
-        log_file.write("")
-    log_changes("INFO", "log", "Log file created", "Initial log")
