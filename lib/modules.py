@@ -5,6 +5,8 @@ from lib.database   import get_database_connection
 from lib.qr         import generate_qr_label
 from lib.log        import log_changes
 
+from config import max_weight, leftover_weight_threshold
+
 def add_storage_location():
     conn = get_database_connection()
     c = conn.cursor()
@@ -127,11 +129,11 @@ def get_files(cursor):
     return files
 
 def add_filament():
+
     conn = get_database_connection()
     cursor = conn.cursor()
 
     token = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:6]
-    max_weight = 1000
     
     # Get the last added filament from the database if it exists
     cursor.execute("SELECT * FROM filament ORDER BY date_added DESC LIMIT 1")
@@ -272,60 +274,63 @@ def use_filament():
     
 
     # 2. List filaments based on the user's choice
-    while True:
-        print("Filament Options:")
-        print("(L)ast 5 added filaments")
-        print("(S)earch by token")
-        option = input("Enter your choice: ").upper()
+    def select_filament():
+        while True:
+            print("Filament Options:")
+            print("(L)ast 5 added filaments")
+            print("(S)earch by token")
+            option = input("Enter your choice: ").upper()
 
-        if option == "L":
-            cursor.execute("SELECT * FROM filament WHERE state != 'archived' ORDER BY date_added DESC LIMIT 5")
-            filaments = cursor.fetchall()
+            if option == "L":
+                cursor.execute("SELECT * FROM filament WHERE state != 'archived' ORDER BY date_added DESC LIMIT 5")
+                filaments = cursor.fetchall()
 
-            for i, filament in enumerate(filaments):
-                print(f"{i + 1}. Token: {filament[0]} | Manufacturer: {filament[1]} | Material: {filament[2]} | Stock Weight: {filament[3]} | Leftover Weight: {filament[4]} | Color: {filament[5]}")
-            
-            try:
-                selected_filament = int(input("Enter the number of the filament you want to use: "))
+                for i, filament in enumerate(filaments):
+                    print(f"{i + 1}. Token: {filament[0]} | Manufacturer: {filament[1]} | Material: {filament[2]} | Stock Weight: {filament[3]} | Leftover Weight: {filament[4]} | Color: {filament[5]}")
+                
+                try:
+                    selected_filament = int(input("Enter the number of the filament you want to use: "))
 
-                # if user enters a number outside list of filaments, print error message and repeat the loop
-                if selected_filament > len(filaments) or selected_filament <= 0:
-                    print("Invalid option. Try again.")
+                    # if user enters a number outside list of filaments, print error message and repeat the loop
+                    if selected_filament > len(filaments) or selected_filament <= 0:
+                        print("Invalid option. Try again.")
+                        continue
+                except ValueError:
+                    print("Invalid input. Enter a number.")
                     continue
-            except ValueError:
-                print("Invalid input. Enter a number.")
-                continue
-            
-            selected_filament = filaments[selected_filament - 1]
-            break
+                
+                selected_filament = filaments[selected_filament - 1]
+                break
 
-        elif option == "S":
-            token = input("Enter filament token (or part of it) to search: ")
-            cursor.execute("SELECT * FROM filament WHERE token LIKE ? AND state != 'archived' ORDER BY date_added DESC", (f"%{token}%",))
-            filaments = cursor.fetchall()
-            if not filaments:
-                print("No filaments found.")
-                continue
-            
-            for i, filament in enumerate(filaments):
-                print(f"{i + 1}. Token: {filament[0]} | Manufacturer: {filament[1]} | Material: {filament[2]} | Stock Weight: {filament[3]} | Leftover Weight: {filament[4]} | Color: {filament[5]}")
-            
-            try:
-                selected_filament = int(input("Enter the number of the filament you want to use: "))
-
-                # if user enters a number outside list of filaments, print error message and repeat the loop
-                if selected_filament > len(filaments) or selected_filament <= 0:
-                    print("Invalid option. Try again.")
+            elif option == "S":
+                token = input("Enter filament token (or part of it) to search: ")
+                cursor.execute("SELECT * FROM filament WHERE token LIKE ? AND state != 'archived' ORDER BY date_added DESC", (f"%{token}%",))
+                filaments = cursor.fetchall()
+                if not filaments:
+                    print("No filaments found.")
                     continue
-            except ValueError:
-                print("Invalid input. Enter a number.")
-                continue
+                
+                for i, filament in enumerate(filaments):
+                    print(f"{i + 1}. Token: {filament[0]} | Manufacturer: {filament[1]} | Material: {filament[2]} | Stock Weight: {filament[3]} | Leftover Weight: {filament[4]} | Color: {filament[5]}")
+                
+                try:
+                    selected_filament = int(input("Enter the number of the filament you want to use: "))
 
-            selected_filament = filaments[selected_filament - 1]
-            break
-        else:
-            print("Invalid option. Try again.")
-    
+                    # if user enters a number outside list of filaments, print error message and repeat the loop
+                    if selected_filament > len(filaments) or selected_filament <= 0:
+                        print("Invalid option. Try again.")
+                        continue
+                except ValueError:
+                    print("Invalid input. Enter a number.")
+                    continue
+
+                selected_filament = filaments[selected_filament - 1]
+                break
+            else:
+                print("Invalid option. Try again.")
+        return selected_filament
+    selected_filament = select_filament()
+
     # 3. Use get_printers to check if there are any printers in the database
     printers = get_printers(cursor)
 
@@ -334,21 +339,34 @@ def use_filament():
     for i, printer in enumerate(printers):
         print(f"{i + 1}. Name: {printer[1]}")
     
+    while True:
         try:
-            selected_printer = int(input("Enter the number of the printer you want to use: "))
+            selected_printer = int(input("Enter the number of the storage location you want to use: "))
             # if user enters a number outside list of provided input, print error message and repeat the loop
-            if selected_printer> len(printers) or selected_printer <= 0:
+            if selected_printer > len(printers) or selected_printer <= 0:
                 print("Invalid option. Try again.")
                 continue
         except ValueError:
-            print("Invalid 3input. Enter a number.")
+            print("Invalid input. Enter a number.")
             continue
+        break
 
     selected_printer = printers[selected_printer - 1]
-
+    # ask user to prepare the printer and insert the filament
+    input(f"Please prepare the '{selected_printer[1]}' and insert the '{selected_filament[0], selected_filament[1], selected_filament[2], selected_filament[5]}'. Press Enter to continue once ready!")
     # 5. Ask user to input filename & weight used
-    filename = input("Enter file name: ") 
-    weight = float(input("Enter filament weight used: "))
+
+    filename = input("Enter file name: ")
+    while True:
+        try:
+            weight = float(input("Enter filament weight used: "))
+            if weight <= 0:
+                print("Weight must be greater than 0.")
+                continue
+        except ValueError:
+            print("Invalid input. Enter a number.")
+            continue
+        break
     
     # 6. Update database with new values
 
@@ -359,24 +377,51 @@ def use_filament():
     file_id = cursor.fetchone()[0]
 
     # If the weight used is greater than the leftover weight
+    leftover_weight = selected_filament[4] - weight
+    
     if weight > selected_filament[4]:
         
+        leftover_weight = 0
         # Set leftover weight to 0 and archive the filament
         cursor.execute("UPDATE filament SET leftover_weight=0, date_last_used=datetime('now'), state='archived' WHERE token=?", (selected_filament[0],))    
         cursor.execute("SELECT all_filaments FROM storage_locations")
 
-        # Remove it from the list but retain the rest of the filaments that are separated by commas
-        cursor.execute("SELECT all_filaments FROM storage_locations WHERE id=?", (selected_filament[6],))
-        all_filaments = cursor.fetchone()[0]
-        all_filaments.remove(selected_filament[0])
-        cursor.execute("UPDATE storage_locations SET all_filaments=? WHERE id=?", (all_filaments, selected_filament[6]))
-    
-    # Else update the leftover weight only, date_last_used and state to "used
+        # Remove the selected filament token in all_filaments from storage_locations table and update the date_last_used
+        # If the filament is the only one in the storage location, set all_filaments to NULL
+        for row in cursor.fetchall():
+            if row[0] == selected_filament[0]:
+                cursor.execute("UPDATE storage_locations SET all_filaments=NULL WHERE all_filaments=?", (selected_filament[0],))
+            else:
+                cursor.execute("UPDATE storage_locations SET all_filaments=REPLACE(all_filaments, ?, '') WHERE all_filaments LIKE ?", (selected_filament[0], f"%{selected_filament[0]}%"))  
+        print(f"Filament '{selected_filament[0]}' has been archived.")
+    # Else update the leftover weight only, date_last_used and state to "used"
     else: 
         cursor.execute("UPDATE filament SET leftover_weight=leftover_weight-?, date_last_used=datetime('now'), state='used' WHERE token=?", (weight, selected_filament[0]))
 
+    # Ask user to archive the filament if the leftover weight is less than 50, else continue
+    if leftover_weight < leftover_weight_threshold:
+        while True:
+            option = input(f"{selected_filament[4]} g remaining for the selected roll.\nFilament will be almost empty after this job. Do you want to archive it? (Type 'Y' or leave empty to ignore) ")
+            if option == "Y" or option == "y":
+                cursor.execute("UPDATE filament SET leftover_weight=0, date_last_used=datetime('now'), state='archived' WHERE token=?", (selected_filament[0],))
+                cursor.execute("SELECT all_filaments FROM storage_locations")
+                # Remove the selected filament token in all_filaments from storage_locations table and update the date_last_used
+                # If the filament is the only one in the storage location, set all_filaments to NULL
+                for row in cursor.fetchall():
+                    if row[0] == selected_filament[0]:
+                        cursor.execute("UPDATE storage_locations SET all_filaments=NULL WHERE all_filaments=?", (selected_filament[0],))
+                    else:
+                        cursor.execute("UPDATE storage_locations SET all_filaments=REPLACE(all_filaments, ?, '') WHERE all_filaments LIKE ?", (selected_filament[0], f"%{selected_filament[0]}%"))  
+                print(f"Filament '{selected_filament[0]}' has been archived.")
+                break
+            elif option == "":
+                break
+            else:
+                print("Invalid option. Try again.")
+                continue
+
     # Update the printer's last_used_filament
-    cursor.execute("UPDATE printers SET last_used_filament=?, date_last_used=datetime('now'), WHERE serial_number=?", (selected_filament[0], selected_printer[0]))
+    cursor.execute("UPDATE printers SET last_used_filament=?, date_last_used=datetime('now') WHERE serial_number=?", (selected_filament[0], selected_printer[0]))
 
     # Update the print history
     cursor.execute("INSERT INTO print_history (id, file, printer, filament, weight, date_added) VALUES (NULL, ?, ?, ?, ?, datetime('now'))", (file_id, selected_printer[0], selected_filament[0], weight ))
@@ -384,10 +429,11 @@ def use_filament():
     # 8. Print and log changes
 
     #Print out the weight used & filament leftover weight
-    print(f"Filament use registered.\nFilament weight used: {weight} g.\nLeftover weight: {selected_filament[4] - weight} g")
-
+    
+    print(f"Weight used {weight} g. Left: {leftover_weight} g in the roll.")
+    print("Changes have been saved to the database.")
     # Write all changes to the log
-    log_changes("INFO", "use_filament","Filament has been used",{"Filament Token": selected_filament[0] , "Leftover weight:": f"{selected_filament[4] - weight} g"})
+    log_changes("INFO", "use_filament","Filament has been used",{"Filament Token": selected_filament[0] , "Leftover weight:": f"{leftover_weight} g"})
 
     conn.commit()
     conn.close()

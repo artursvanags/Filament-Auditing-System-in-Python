@@ -20,6 +20,13 @@ The QR code would allow for the user to accurately track the filament in the ful
 ## Process description
 ### Adding a new filament roll
 When a new filament roll is added to the system:
-1. The user begins the process by either scanning the QR code with a device or manually inputing the filament token in the system;
-2. The user fills out details for the new filament roll e.g. manufacturer name, material type, stock weight, leftover weight and color;
+1. The user begins by filling out details about filament roll e.g. manufacturer name, material type, stock weight, leftover weight and color;
+2. The user is asked to select/create a storage location for the filament roll;
 3. the system registers the changes, and logs the new filament roll.
+
+### Using a filament roll
+When a filament roll is used for printing:
+1. The user begins the process by either scanning the QR code with a device or manually inputing the filament token in the system from the available selection;
+2. The user is asked to select/create the printer used for printing;
+3. The user is asked to select/input the file name, weight used for printing;
+4. The system registers the changes, and logs the usage details.
