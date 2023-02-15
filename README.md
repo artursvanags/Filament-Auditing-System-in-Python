@@ -11,8 +11,11 @@ The QR code would allow for the user to accurately track the filament in the ful
 
 
 # Current features
-* QR code generation, scanning with default webcam
-* Filament roll registration
+* New filament roll registration ( automatic token generation, manual metadata input )
+* Filament roll usage registration ( updates leftover weight, logs usage details )
+* QR code generation
+* QR code scanner ( currently inactive )
+
 
 ## Process description
 ### Adding a new filament roll
