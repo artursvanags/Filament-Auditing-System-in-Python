@@ -44,6 +44,11 @@ def get_storage_locations(cursor):
 def add_printer():
     conn = get_database_connection()
     c = conn.cursor()
+    # Ask for user to input serial number, if left empty, generate a random one uppercased
+    serial_number = input("Enter printer serial number (leave blank to generate a random one): ").upper()
+    if not serial_number:
+        serial_number = hashlib.sha224(str(random.getrandbits(256)).encode('utf-8')).hexdigest()[0:10].upper()
+        print(f"Serial number: {serial_number} generated")
 
     name = input("Enter printer name: ")
 
@@ -57,11 +62,11 @@ def add_printer():
     # If printer does not exist, insert a new printer
     else:
         c.execute(
-            "INSERT INTO printers (name, date_added) VALUES (?, datetime('now', 'localtime'))", (name,))
-        print(f"Printer '{name}' added.")
+            "INSERT INTO printers (serial_number, name, date_added) VALUES (?, ?, datetime('now', 'localtime'))", (serial_number, name,))
+        print(f"Printer '{name}' with serial number '{serial_number}' added.")
     
     # Write to log
-    log_changes("INFO", "add_printer", "Printer added", f"Added printer '{name}'.")
+    log_changes("INFO", "add_printer", "Printer added", f"Printer '{name}' with serial number '{serial_number}' added.")
 
     conn.commit()
     conn.close()
@@ -257,6 +262,8 @@ def get_filaments(cursor):
     return filaments
 
 def use_filament():
+
+
     conn = get_database_connection()
     cursor = conn.cursor()
 
@@ -339,26 +346,42 @@ def use_filament():
 
     selected_printer = printers[selected_printer - 1]
 
-    # 5. Ask user to input filename
+    # 5. Ask user to input filename & weight used
     filename = input("Enter file name: ") 
-    # 6. Ask user for print weight
     weight = float(input("Enter filament weight used: "))
     
-    # 7. Update the selected filament row in the database with the new leftover weight
+    # 6. Update database with new values
 
+    # Create a new entry in the files table
+    cursor.execute("INSERT INTO files (id, filename, weight, last_used_filament, last_used_printer, date_added, date_last_used) VALUES (NULL, ?, ?, ?, ?, datetime('now'), datetime('now'))", (filename, weight, selected_filament[0], selected_printer[0]))
+    # fetch the id of the newly created entry
+    cursor.execute("SELECT id FROM files WHERE filename=?", (filename,))
+    file_id = cursor.fetchone()[0]
+
+    # If the weight used is greater than the leftover weight
     if weight > selected_filament[4]:
         
-        # If the weight used is greater than the leftover weight, set leftover weight to 0 and archive the filament
+        # Set leftover weight to 0 and archive the filament
         cursor.execute("UPDATE filament SET leftover_weight=0, date_last_used=datetime('now'), state='archived' WHERE token=?", (selected_filament[0],))    
         cursor.execute("SELECT all_filaments FROM storage_locations")
-        # Locate the filament token from all_filaments column in storage_locations table, remove it from the list but retain the rest of the filaments that are separated by commas
+
+        # Remove it from the list but retain the rest of the filaments that are separated by commas
         cursor.execute("SELECT all_filaments FROM storage_locations WHERE id=?", (selected_filament[6],))
         all_filaments = cursor.fetchone()[0]
         all_filaments.remove(selected_filament[0])
         cursor.execute("UPDATE storage_locations SET all_filaments=? WHERE id=?", (all_filaments, selected_filament[6]))
-
-    else:
+    
+    # Else update the leftover weight only, date_last_used and state to "used
+    else: 
         cursor.execute("UPDATE filament SET leftover_weight=leftover_weight-?, date_last_used=datetime('now'), state='used' WHERE token=?", (weight, selected_filament[0]))
+
+    # Update the printer's last_used_filament
+    cursor.execute("UPDATE printers SET last_used_filament=?, date_last_used=datetime('now'), WHERE serial_number=?", (selected_filament[0], selected_printer[0]))
+
+    # Update the print history
+    cursor.execute("INSERT INTO print_history (id, file, printer, filament, weight, date_added) VALUES (NULL, ?, ?, ?, ?, datetime('now'))", (file_id, selected_printer[0], selected_filament[0], weight ))
+
+    # 8. Print and log changes
 
     #Print out the weight used & filament leftover weight
     print(f"Filament use registered.\nFilament weight used: {weight} g.\nLeftover weight: {selected_filament[4] - weight} g")
@@ -368,3 +391,4 @@ def use_filament():
 
     conn.commit()
     conn.close()
+
