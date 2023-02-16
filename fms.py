@@ -50,23 +50,24 @@ if __name__ == '__main__':
             log_file.write("")
         log_changes("INFO", "log", "Log file created", "Initial")
 
-
     # If the database file doesn't exist, create it and log the creation
     if not os.path.exists(database_name + ".db"):
         init_database()
         print("Database file has been created with the following tables")
+       
         # print the tables it created
         conn = get_database_connection()
         c = conn.cursor()
 
         c.execute("SELECT name FROM sqlite_master WHERE type='table';")
         print(c.fetchall())
-
         conn.close()
 
         log_changes("INFO", "database", "Database file created", "Initial")
     else:
         print("Database Initialized!")
+    
+    
     #Start the scanner in a separate thread
     # scanner_thread = threading.Thread(target=scan_qr_code, args=(filament_data,))
     # scanner_thread.start()
