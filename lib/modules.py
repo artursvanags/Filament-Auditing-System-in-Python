@@ -341,7 +341,7 @@ def use_filament():
     
     while True:
         try:
-            selected_printer = int(input("Enter the number of the storage location you want to use: "))
+            selected_printer = int(input("Enter the number of the printer you want to use: "))
             # if user enters a number outside list of provided input, print error message and repeat the loop
             if selected_printer > len(printers) or selected_printer <= 0:
                 print("Invalid option. Try again.")
@@ -374,7 +374,7 @@ def use_filament():
     cursor.execute("INSERT INTO files (id, filename, weight, last_used_filament, last_used_printer, date_added, date_last_used) VALUES (NULL, ?, ?, ?, ?, datetime('now'), datetime('now'))", (filename, weight, selected_filament[0], selected_printer[0]))
     # fetch the id of the newly created entry
     cursor.execute("SELECT id FROM files WHERE filename=?", (filename,))
-    file_id = cursor.fetchone()[0]
+    file_id = cursor.fetchone()[1]
 
     # If the weight used is greater than the leftover weight
     leftover_weight = selected_filament[4] - weight
@@ -424,7 +424,7 @@ def use_filament():
     cursor.execute("UPDATE printers SET last_used_filament=?, date_last_used=datetime('now') WHERE serial_number=?", (selected_filament[0], selected_printer[0]))
 
     # Update the print history
-    cursor.execute("INSERT INTO print_history (id, file, printer, filament, weight, date_added) VALUES (NULL, ?, ?, ?, ?, datetime('now'))", (file_id, selected_printer[0], selected_filament[0], weight ))
+    cursor.execute("INSERT INTO print_history (id, filename, printer, filament, weight, date_added) VALUES (NULL, ?, ?, ?, ?, datetime('now'))", (file_id, selected_printer[0], selected_filament[0], weight ))
 
     # 8. Print and log changes
 
