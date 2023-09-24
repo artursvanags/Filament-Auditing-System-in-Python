@@ -54,7 +54,7 @@ def init_database():
     # Add a table for print history
     c.execute("""CREATE TABLE IF NOT EXISTS print_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                file text,
+                filename text,
                 printer text,
                 filament text,
                 weight real,
