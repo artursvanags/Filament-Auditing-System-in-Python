@@ -2,6 +2,9 @@
 qr/
 *.db
 *desktop.ini
+*/desktop.ini
 __pycache__/
 *.pyc
 *.json
+log.json
+qrtest.py
